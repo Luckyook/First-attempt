@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#05060f">
+  <meta name="description" content="霓虹疾行：一款离线可玩的霓虹天台跑酷游戏。跳跃、二段跳、滑铲，在无尽天台间刷新纪录。">
+  <title>霓虹疾行 · NEON ROOFTOP RUN</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305060f'/%3E%3Cpath d='M18 48V16h9l20 22V16h9v32h-9L27 26v22z' fill='%2364f4ff'/%3E%3Cpath d='M12 55h40' stroke='%23ff3d8b' stroke-width='3'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app" class="app" data-state="menu">
+    <canvas id="game" aria-label="霓虹疾行跑酷游戏画面" role="img"></canvas>
+
+    <div class="fx fx-scanlines" aria-hidden="true"></div>
+    <div class="fx fx-vignette" aria-hidden="true"></div>
+    <div id="flash" class="flash" aria-hidden="true"></div>
+
+    <div class="system-tools">
+      <div class="best-pill" id="bestPill">
+        <span>BEST</span><strong id="hudBest">0</strong><em>m</em>
+      </div>
+      <button type="button" class="icon-btn js-sound" aria-label="关闭声音" title="声音 (M)">
+        <svg class="ico ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M18.7 5.8a9 9 0 0 1 0 12.4"/></svg>
+        <svg class="ico ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="m16 9 5 6m0-6-5 6"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="fullscreenBtn" aria-label="切换全屏" title="全屏 (F)">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+      </button>
+      <button type="button" class="icon-btn" id="pauseBtn" aria-label="暂停游戏" title="暂停 (P / ESC)">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+      </button>
+    </div>
+
+    <div id="hud" class="hud" aria-hidden="true">
+      <div class="hud-left">
+        <div class="hud-brand">
+          <span class="brand-mark">N</span>
+          <div class="brand-copy">
+            <strong>NEON ROOFTOP</strong>
+            <small>霓虹疾行 <i>//</i> SECTOR 07</small>
+          </div>
+        </div>
+        <div class="distance-block">
+          <div class="distance"><span id="distance">0000</span><em>m</em></div>
+          <div class="meta-row">
+            <span>SCORE <b id="score">0</b></span>
+            <span class="dot"></span>
+            <span>SHARDS <b id="shards">0</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="combo-badge" id="comboBadge" aria-hidden="true">
+          <div class="combo-copy"><span>COMBO</span><strong id="comboValue">0</strong><small>×<b id="comboMult">1.0</b></small></div>
+          <i class="combo-track"><b id="comboBar"></b></i>
+        </div>
+        <div class="powerups" id="powerups" aria-live="polite">
+          <div class="power" data-power="shield">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.6 2.8 8.2 7 10 4.2-1.8 7-5.4 7-10V6l-7-3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            <span>护盾</span><b>ON</b>
+          </div>
+          <div class="power" data-power="magnet">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v8a7 7 0 0 0 14 0V4h-4v8a3 3 0 0 1-6 0V4H5Z"/><path d="M5 8h4M15 8h4"/></svg>
+            <span>磁力</span><b>0s</b>
+          </div>
+          <div class="power" data-power="boost">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13 2-8 12h6l-1 8 8-12h-6l1-8Z"/></svg>
+            <span>超载</span><b>0s</b>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hints">
+          <span><kbd>SPACE</kbd> / <kbd>↑</kbd> 跳跃</span>
+          <span><kbd>↓</kbd> 滑铲</span>
+          <span class="hint-ghost">空中再跳一次，越过更远的天台</span>
+        </div>
+        <div class="speed-gauge" aria-hidden="true">
+          <span>SPEED</span>
+          <div class="speed-track"><i id="speedFill"></i></div>
+        </div>
+      </div>
+    </div>
+
+    <section id="menuScreen" class="screen menu-screen" aria-label="游戏菜单">
+      <div class="menu-wrap">
+        <div class="menu-copy">
+          <div class="eyebrow"><i></i>ENDLESS PARKOUR <span>/</span> SECTOR 07</div>
+          <h1 class="game-title">
+            <span class="title-cn">霓虹<span class="hot">疾行</span></span>
+            <span class="title-en" data-text="NEON ROOFTOP RUN">NEON ROOFTOP RUN</span>
+          </h1>
+          <p class="lede">踏过城市上空的最后一条天台线。<br>跳跃、二段跳、滑铲，别让速度停下来。</p>
+          <div class="menu-actions">
+            <button type="button" class="btn btn-primary" id="startBtn">
+              <span class="btn-label"><b>开始跑酷</b><small>START RUN</small></span>
+              <kbd>SPACE</kbd>
+            </button>
+            <div class="menu-best">本机纪录 <strong id="menuBest">—</strong></div>
+          </div>
+          <div class="menu-note">
+            <span class="live-dot"></span>
+            单局无尽 · 收集碎片提升连击 · 随机强化
+          </div>
+          <div class="mobile-hints" aria-hidden="true">
+            <span><kbd>轻触</kbd> 跳跃</span><span><kbd>下滑</kbd> 滑铲</span><span><kbd>上滑</kbd> 二段跳</span>
+          </div>
+        </div>
+
+        <aside class="menu-panel" aria-label="操作说明">
+          <div class="panel-head">
+            <span>控制台</span><i>CTRL / 07</i>
+          </div>
+          <div class="control-list">
+            <div class="control">
+              <div class="key-cluster"><kbd>SPACE</kbd><kbd>↑</kbd></div>
+              <div><strong>跳跃</strong><small>在空中再按一次，触发二段跳</small></div>
+            </div>
+            <div class="control">
+              <div class="key-cluster"><kbd>↓</kbd><kbd>S</kbd></div>
+              <div><strong>滑铲</strong><small>压低身形，穿过低空全息路障</small></div>
+            </div>
+            <div class="control">
+              <div class="key-cluster"><kbd>P</kbd><kbd>ESC</kbd></div>
+              <div><strong>暂停</strong><small>喘口气，节奏不会消失</small></div>
+            </div>
+          </div>
+          <div class="panel-scan" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="panel-note">跑得越远，城市越快。留意天台上的护盾、磁力与超载模块——它们会决定你能跑多远。</p>
+        </aside>
+      </div>
+
+      <div class="menu-ticker" aria-hidden="true">
+        <div class="ticker-track">
+          <span>保持移动</span><i>◆</i><span>别回头</span><i>◆</i><span>天台没有终点</span><i>◆</i><span>收集每一块碎片</span><i>◆</i><span>NORTH ROOFTOP TRANSIT</span><i>◆</i>
+          <span>保持移动</span><i>◆</i><span>别回头</span><i>◆</i><span>天台没有终点</span><i>◆</i><span>收集每一块碎片</span><i>◆</i><span>NORTH ROOFTOP TRANSIT</span><i>◆</i>
+        </div>
+      </div>
+    </section>
+
+    <section id="pauseScreen" class="screen center-screen" aria-label="游戏暂停" hidden>
+      <div class="result-card pause-card">
+        <div class="card-corners" aria-hidden="true"></div>
+        <div class="eyebrow"><i></i>SYSTEM PAUSED</div>
+        <h2>喘口气</h2>
+        <p class="result-sub"><span class="keyboard-hint">城市还在等你。按 <kbd>P</kbd> 或 <kbd>ESC</kbd> 继续。</span><span class="touch-hint">城市还在等你。点击下方按钮继续。</span></p>
+        <div class="pause-readout">
+          <span>当前距离 <strong id="pauseDistance">0 m</strong></span>
+          <span>当前得分 <strong id="pauseScore">0</strong></span>
+        </div>
+        <div class="result-actions">
+          <button type="button" class="btn btn-primary" id="resumeBtn"><span class="btn-label"><b>继续跑酷</b><small>RESUME</small></span></button>
+          <button type="button" class="btn btn-ghost" id="restartPauseBtn">重新开始</button>
+          <button type="button" class="btn btn-quiet" id="quitPauseBtn">返回首页</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameoverScreen" class="screen center-screen" aria-label="本局结束" hidden>
+      <div class="result-card">
+        <div class="card-corners" aria-hidden="true"></div>
+        <div class="result-head">
+          <div class="eyebrow"><i></i>RUN TERMINATED</div>
+          <span class="new-best" id="newBest" hidden>NEW RECORD</span>
+        </div>
+        <h2 id="resultTitle">信号丢失</h2>
+        <p class="result-sub" id="resultSub">天台的风还在催你向前。</p>
+        <div class="result-distance"><span id="resultDistance">0</span><em>m</em></div>
+        <div class="result-grid">
+          <div><span>SCORE</span><strong id="resultScore">0</strong></div>
+          <div><span>SHARDS</span><strong id="resultShards">0</strong></div>
+          <div><span>MAX COMBO</span><strong id="resultCombo">0</strong></div>
+        </div>
+        <div class="result-best" id="resultBest">本机最佳 <strong>0 m</strong></div>
+        <div class="result-actions">
+          <button type="button" class="btn btn-primary" id="retryBtn">
+            <span class="btn-label"><b>再来一次</b><small>RETRY</small></span>
+            <kbd>R</kbd>
+          </button>
+          <button type="button" class="btn btn-ghost" id="menuBtn">返回首页</button>
+        </div>
+      </div>
+    </section>
+
+    <div class="touch-controls" id="touchControls" aria-hidden="true">
+      <button type="button" class="touch-btn touch-slide" id="touchSlide" aria-label="滑铲">
+        <span>滑铲</span><small>SLIDE</small>
+      </button>
+      <button type="button" class="touch-btn touch-jump" id="touchJump" aria-label="跳跃">
+        <span>跳跃</span><small>JUMP</small>
+      </button>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite">
+      <span class="toast-kicker" id="toastKicker">SIGNAL</span>
+      <strong id="toastTitle">系统提示</strong>
+      <small id="toastSub">保持节奏。</small>
+      <i class="toast-line" aria-hidden="true"></i>
+    </div>
+
+    <noscript><div class="noscript">需要开启 JavaScript 才能运行《霓虹疾行》。</div></noscript>
+  </div>
+
+  <script src="js/game.js"></script>
+</body>
+</html>
